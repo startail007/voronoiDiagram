@@ -383,6 +383,13 @@ function triangulationCreate(posList) {
 }
 
 function voronoiCreate(posList, triangleList, shell, mainRect) {
+  if (posList.length <= 0) {
+    return [];
+  }
+  var borderPos = [mainRect.getLT(), mainRect.getRT(), mainRect.getRB(), mainRect.getLB()];
+  if (posList.length <= 1) {
+    return [borderPos];
+  }
   if (mainRect) {
     var mainBound = mainRect.toBound();
   }
@@ -490,8 +497,6 @@ function voronoiCreate(posList, triangleList, shell, mainRect) {
       });
     });
   }
-
-  var borderPos = [mainRect.getLT(), mainRect.getRT(), mainRect.getRB(), mainRect.getLB()];
 
   var polygonListShow = [];
   var borderPosI, polygon, uncloseBool, pos1, pos2;
