@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>voronoi</title>
+    <meta charset="UTF-8" />
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    <script src="dat.gui.min.js"></script>
+    <script src="index.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+TC&display=swap" rel="stylesheet" />
+    <style>
+      body {
+        margin: 0;
+        /*background-color: #000000;*/
+      }
+      .dg .cr .button {
+        background-color: brown;
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id="canvas" width="800px" height="800px"></canvas>
+  </body>
+
+  <script>
+    (function () {
+      var canvas, ctx, cWidth, cHeight;
+      canvas = document.getElementById("canvas");
+      ctx = canvas.getContext("2d");
+      cWidth = canvas.width;
+      cHeight = canvas.height;
+      var oldTime = Date.now();
+
+      var data = {
+        quantity: 1000,
+        reset: new Function(),
+        triangle: false,
+        shell: false,
+        voronoi: true,
+        site: true,
+      };
+
+      //var quantity = 1000;
+      var mainRect = new Rect(0, 0, cWidth, cHeight);
+      var posList;
+      var triangulationData;
+      var polygonList;
+
+      function resetPosList(quantity) {
+        var posList = [];
+        for (var i = 0; i < quantity; i++) {
+          posList.push([Math.random() * cWidth, Math.random() * cHeight]);
+        }
+        return posList;
+      }
+      function drawPosList(ctx, posList, options) {
+        options = options || {};
+        options.fillStyle = options.fillStyle || "#ff0000";
+        options.size = options.size || 1;
+        options.pos = options.pos || [0, 0];
+        ctx.fillStyle = options.fillStyle;
+        posList.forEach(function (el, index) {
+          ctx.beginPath();
+          ctx.arc(el[0] + options.pos[0], el[1] + options.pos[1], options.size, 0, 2 * Math.PI);
+          ctx.fill();
+        });
+      }
+      function drawTriangulation(ctx, posList, triangleList, options) {
+        options = options || {};
+        options.strokeStyle = options.strokeStyle || "#ffff00";
+        options.fillStyle = options.fillStyle || "";
+        options.lineWidth = options.lineWidth || 1;
+        options.pos = options.pos || [0, 0];
+        ctx.strokeStyle = options.strokeStyle;
+        ctx.lineWidth = options.lineWidth;
+        ctx.fillStyle = options.fillStyle;
+
+        triangleList.forEach(function (polygon) {
+          ctx.beginPath();
+          drawPolygon(
+            ctx,
+            polygon.points.map(function (el) {
+              return pushVector(posList[el], options.pos);
+            })
+          );
+          if (options.fillStyle !== "") {
+            ctx.fill();
+          }
+          if (options.strokeStyle !== "") {
+            ctx.stroke();
+          }
+        });
+      }
+      function drawVoronoi(ctx, polygonList, options) {
+        options = options || {};
+        options.strokeStyle = options.strokeStyle || "#0000ff";
+        options.fillStyle = options.fillStyle || "";
+        options.lineWidth = options.lineWidth || 1;
+        options.pos = options.pos || [0, 0];
+        ctx.strokeStyle = options.strokeStyle;
+        ctx.lineWidth = options.lineWidth;
+        ctx.fillStyle = options.fillStyle;
+
+        polygonList.forEach(function (polygon, i) {
+          ctx.beginPath();
+          drawPolygon(
+            ctx,
+            polygon.map(function (el) {
+              return pushVector(el, options.pos);
+            })
+          );
+          if (options.fillStyle !== "") {
+            ctx.fill();
+          }
+          if (options.strokeStyle !== "") {
+            ctx.stroke();
+          }
+        });
+      }
+      function drawShell(ctx, posList, shell, options) {
+        options = options || {};
+        options.strokeStyle = options.strokeStyle || "#ff00ff";
+        options.fillStyle = options.fillStyle || "";
+        options.lineWidth = options.lineWidth || 1;
+        options.pos = options.pos || [0, 0];
+        ctx.strokeStyle = options.strokeStyle;
+        ctx.lineWidth = options.lineWidth;
+        ctx.fillStyle = options.fillStyle;
+
+        ctx.beginPath();
+        drawPolygon(
+          ctx,
+          shell.map(function (el) {
+            return pushVector(posList[el], options.pos);
+          })
+        );
+        ctx.stroke();
+      }
+      function drawPolygon(ctx, polygon) {
+        if (polygon.length > 0) {
+          ctx.moveTo(polygon[0][0], polygon[0][1]);
+        }
+        var index;
+        for (var i = 0, len = polygon.length; i < len; i++) {
+          index = (i + 1) % len;
+          ctx.lineTo(polygon[index][0], polygon[index][1]);
+        }
+      }
+
+      function calcVoronoi(posList) {
+        var now = Date.now();
+        var time = now;
+
+        triangulationData = triangulationCreate(posList);
+
+        /*now = Date.now();
+        console.log("三角形花費時間：" + (now - time) / 1000 + "秒");
+        time = now;*/
+
+        polygonList = voronoiCreate(posList, triangulationData.triangleList, triangulationData.shell, mainRect);
+        //var polygonList = voronoiCreate(posList, triangulationData.triangleList, triangulationData.shell);
+
+        /*now = Date.now();
+        console.log("形狀建立花費時間：" + (now - time) / 1000 + "秒");
+        time = now;*/
+        now = Date.now();
+        console.log("花費時間：" + (now - time) / 1000 + "秒");
+        time = now;
+      }
+
+      var gui = new dat.GUI();
+      //console.log(gui);
+      var f1 = gui.addFolder("粒子");
+      var controller_quantity = f1.add(data, "quantity", 0, 10000, 1).name("數量");
+      var controller_reset = f1.add(data, "reset").name("更新");
+      f1.open();
+      /*controller_quantity.onChange(function (value) {        
+      });*/
+      controller_reset.onChange(function (value) {
+        init();
+      });
+
+      var f2 = gui.addFolder("顯示");
+      var controller_site = f2.add(data, "site").name("點");
+      var controller_triangle = f2.add(data, "triangle").name("三角形");
+      var controller_shell = f2.add(data, "shell").name("外圍");
+      var controller_voronoi = f2.add(data, "voronoi").name("沃羅諾伊");
+      f2.open();
+      controller_site.onChange(function (value) {
+        draw();
+      });
+      controller_triangle.onChange(function (value) {
+        draw();
+      });
+      controller_shell.onChange(function (value) {
+        draw();
+      });
+      controller_voronoi.onChange(function (value) {
+        draw();
+      });
+      function draw() {
+        ctx.clearRect(0, 0, cWidth, cHeight);
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, cWidth, cHeight);
+        if (data.voronoi) {
+          drawVoronoi(ctx, polygonList, { fillStyle: "rgba(0,0,255,0.2)" });
+        }
+        if (data.triangle) {
+          drawTriangulation(ctx, posList, triangulationData.triangleList, { fillStyle: "rgba(255,255,0,0.2)" });
+        }
+        if (data.shell) {
+          drawShell(ctx, posList, triangulationData.shell, { lineWidth: 3 });
+        }
+        if (data.site) {
+          drawPosList(ctx, posList);
+        }
+      }
+      function init() {
+        posList = resetPosList(data.quantity);
+        calcVoronoi(posList);
+        draw();
+      }
+
+      init();
+
+      /*var animate = function () {
+        //requestAnimationFrame(animate);
+      };
+      animate();*/
+    })();
+  </script>
+</html>
