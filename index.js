@@ -116,7 +116,7 @@ function aabbHit(rect0, rect1) {
 }
 
 function lineToRect(pos0, pos1) {
-  var xMin, xMa, yMin, yMax, bool;
+  var xMin, xMax, yMin, yMax, bool;
   bool = pos0[0] < pos1[0];
   xMin = bool ? pos0[0] : pos1[0];
   xMax = bool ? pos1[0] : pos0[0];
